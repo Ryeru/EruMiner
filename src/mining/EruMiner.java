@@ -1,5 +1,6 @@
 package mining;
 
+import mining.data.Pickaxe;
 import mining.nodes.BankHandler;
 import mining.nodes.MiningHandler;
 import mining.nodes.PickaxeWielder;
@@ -21,6 +22,7 @@ public class EruMiner extends AbstractScript {
     @Override
     public void onStart() {
         super.onStart();
+        Pickaxe.api = this;
         tasks.add(new BankHandler(this));
         tasks.add(new PickaxeWielder(this));
         tasks.add(new MiningHandler(this));

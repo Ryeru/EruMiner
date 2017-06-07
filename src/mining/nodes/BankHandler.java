@@ -27,15 +27,15 @@ public class BankHandler extends Node {
     }
 
     private void withdrawItems() {
-        Optional<Pickaxe> pickaxe = Pickaxe.getBest(api());
+        Optional<Pickaxe> pickaxe = Pickaxe.getBest();
 
         if (pickaxe.isPresent()) {
             if (api().getBank().getWithdrawMode().equals(BankMode.ITEM)) {
-                if (pickaxe.get().isInEquipment(api())) {
+                if (pickaxe.get().isInEquipment()) {
                     handleWhenInEquipment();
-                } else if (pickaxe.get().isInInventory(api())) {
+                } else if (pickaxe.get().isInInventory()) {
                     handleWhenInInventory(pickaxe.get());
-                } else if (pickaxe.get().isInBank(api())) {
+                } else if (pickaxe.get().isInBank()) {
                     handleWhenInBank(pickaxe.get());
                 }
             } else if (api().getBank().setWithdrawMode(BankMode.ITEM)) {
@@ -44,7 +44,7 @@ public class BankHandler extends Node {
         }
     }
 
-    public void handleWhenInInventory(Pickaxe pickaxe) {
+    private void handleWhenInInventory(Pickaxe pickaxe) {
         if (getUniqueItemCount() > 2 || duplicateInInventory(pickaxe.getName())) {
             if (api().getBank().depositAllItems()) {
                 sleepUntil(() -> api().getInventory().isEmpty());
@@ -57,7 +57,7 @@ public class BankHandler extends Node {
         }
     }
 
-    public void handleWhenInBank(Pickaxe pickaxe) {
+    private void handleWhenInBank(Pickaxe pickaxe) {
         if (!api().getInventory().isEmpty()) {
             if (api().getBank().depositAllItems()) {
                 sleepUntil(() -> api().getInventory().isEmpty());
@@ -67,7 +67,7 @@ public class BankHandler extends Node {
         }
     }
 
-    public void handleWhenInEquipment() {
+    private void handleWhenInEquipment() {
         if (!api().getInventory().isEmpty() && api().getBank().depositAllItems()) {
             closeBank(() -> api().getInventory().isEmpty());
         } else {
@@ -96,7 +96,7 @@ public class BankHandler extends Node {
     }
 
     public boolean shouldExecute() {
-        Optional<Pickaxe> pickaxe = Pickaxe.getBest(api());
+        Optional<Pickaxe> pickaxe = Pickaxe.getBest();
         return api().getBank().isOpen() || api().getInventory().isFull() || !pickaxe.isPresent();
     }
 

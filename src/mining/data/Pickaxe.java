@@ -14,40 +14,43 @@ public enum Pickaxe {
     IRON("Iron pickaxe", 1),
     BRONZE("Bronze pickaxe", 1);
 
+    public static MethodContext api;
+
     String name;
     int requiredLevel;
 
     Pickaxe(String name, int requiredLevel) {
         this.name = name;
+
         this.requiredLevel = requiredLevel;
     }
 
-    public static Optional<Pickaxe> getBest(MethodContext api) {
+    public static Optional<Pickaxe> getBest() {
         for (Pickaxe axe : values()) {
-            if ((axe.isInBank(api) || axe.isInInventory(api) || axe.isInEquipment(api)) && axe.canUse(api)) {
+            if ((axe.isInBank() || axe.isInInventory() || axe.isInEquipment()) && axe.canUse()) {
                 return Optional.of(axe);
             }
         }
         return Optional.empty();
     }
 
-    public boolean canUse(MethodContext api) {
+    public boolean canUse() {
         return api.getSkills().getRealLevel(Skill.MINING) >= this.requiredLevel;
     }
 
-    public boolean canWear(MethodContext api) {
+    public boolean canWear() {
         return api.getSkills().getRealLevel(Skill.ATTACK) >= this.requiredLevel - 1;
     }
 
-    public boolean isInInventory(MethodContext api) {
+    public boolean isInInventory() {
         return api.getInventory().contains(this.getName());
     }
 
-    public boolean isInBank(MethodContext api) {
+    public boolean isInBank() {
         return api.getBank().contains(this.getName());
     }
 
-    public boolean isInEquipment(MethodContext api) {
+    public boolean isInEquipment() {
         return api.getEquipment().contains(this.getName());
     }
 

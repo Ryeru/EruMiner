@@ -14,15 +14,15 @@ public class PickaxeWielder extends Node {
 
     @Override
     public void execute() {
-        Optional<Pickaxe> pickaxe = Pickaxe.getBest(api());
-        if (pickaxe.isPresent() && pickaxe.get().isInInventory(api()) &&
+        Optional<Pickaxe> pickaxe = Pickaxe.getBest();
+        if (pickaxe.isPresent() && pickaxe.get().isInInventory() &&
                 api().getInventory().get(pickaxe.get().getName()).interact("Wield")) {
-            sleepUntil(() -> pickaxe.get().isInEquipment(api()));
+            sleepUntil(() -> pickaxe.get().isInEquipment());
         }
     }
 
     public boolean shouldExecute() {
-        Optional<Pickaxe> pickaxe = Pickaxe.getBest(api());
-        return pickaxe.isPresent() && pickaxe.get().canWear(api()) && pickaxe.get().isInInventory(api());
+        Optional<Pickaxe> pickaxe = Pickaxe.getBest();
+        return pickaxe.isPresent() && pickaxe.get().canWear() && pickaxe.get().isInInventory();
     }
 }
