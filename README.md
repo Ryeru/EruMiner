@@ -1,3 +1,3 @@
 # EruMiner
 
-A scritpp that mines rocks in Varrock.
+A script that mines rocks in Varrock.
