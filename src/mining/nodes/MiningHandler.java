@@ -1,6 +1,7 @@
 package mining.nodes;
 
 import mining.Node;
+import mining.data.Coord;
 import mining.data.Rock;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.MethodContext;
@@ -10,9 +11,8 @@ import org.dreambot.api.wrappers.interactive.GameObject;
 import org.dreambot.api.wrappers.interactive.Player;
 
 import java.awt.*;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
+import java.util.*;
+import java.util.List;
 
 public class MiningHandler extends Node {
 
@@ -38,7 +38,7 @@ public class MiningHandler extends Node {
     public void execute() {
         HashSet<GameObject> inUse = getAlreadyInUseRocks();
         Optional<GameObject> rock = nearest(inUse);
-
+        Iterator<Coord> coordIterator;
         if (rock.isPresent()) {
             if (rock.get().isOnScreen() && rock.get().distance() < 7) {
                 if (stoppedMining() && rock.get().interact("Mine")) {
@@ -63,6 +63,13 @@ public class MiningHandler extends Node {
                     return newRock.isPresent() && newRock.get().isOnScreen();
                 });
             }
+        } else if (Rock.getSelectedCoords().size() == 1
+                && (coordIterator = Rock.getSelectedCoords().iterator()).hasNext()
+                && coordIterator.next().toTile().distance() < 15) {
+            sleepUntil(() -> {
+                Optional<GameObject> newRock = nearest(inUse);
+                return newRock.isPresent() && newRock.get().isOnScreen();
+            });
         } else if (api().getWalking().walk(miningLocationTile)) {
             int randomDistance = (int) Calculations.nextGaussianRandom(5, 3);
             sleepUntil(() -> api().getWalking().getDestinationDistance() < randomDistance, 3200, 200);
@@ -79,16 +86,29 @@ public class MiningHandler extends Node {
 
     private Optional<GameObject> nearest(HashSet<GameObject> inUse) {
         HashSet<Short> colours = new HashSet<>();
-        java.util.List<GameObject> notInUseObjects = new LinkedList<>();
-        java.util.List<GameObject> objects = api().getGameObjects().all(gameObject -> {
+
+        List<GameObject> notInUseObjects = new LinkedList<>();
+        List<GameObject> notInUseSelectedObjects = new LinkedList<>();
+        List<GameObject> selectedObjects = new LinkedList<>();
+
+        List<GameObject> objects = api().getGameObjects().all(gameObject -> {
             String name;
             short[] modelColours;
             if (gameObject != null && (name = gameObject.getName()) != null && name.contains("Rock")
                     && (modelColours = gameObject.getModelColors()) != null && modelColours.length > 0 && gameObject.distance() < 12) {
+                Coord tile = new Coord(gameObject.getTile());
                 colours.add(modelColours[0]);
 
                 if (!inUse.contains(gameObject) && gameObject.distance() < 5) {
+                    if (Rock.getSelectedCoords().contains(tile)) {
+                        notInUseSelectedObjects.add(gameObject);
+                        return false;
+                    }
                     notInUseObjects.add(gameObject);
+                    return false;
+                }
+                if (Rock.getSelectedCoords().contains(tile)) {
+                    selectedObjects.add(gameObject);
                     return false;
                 }
                 return true;
@@ -96,22 +116,42 @@ public class MiningHandler extends Node {
             return false;
         });
 
-        notInUseObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
-        objects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        int selectedSize = Rock.getSelectedCoords().size();
+
+        if (selectedSize > 0) {
+            notInUseSelectedObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+            selectedObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        } else {
+            notInUseObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+            objects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        }
 
         for (Rock rock : Rock.values()) {
             if (rock.canMine(api().getSkills().getRealLevel(Skill.MINING))
                     && colours.contains(rock.getModelColour())) {
-                for (GameObject object : notInUseObjects) {
+                for (GameObject object : notInUseSelectedObjects) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
                 }
-                for (GameObject object : objects) {
+                for (GameObject object : selectedObjects) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
                 }
+                if (selectedSize == 0) {
+                    for (GameObject object : notInUseObjects) {
+                        if (object.getModelColors()[0] == rock.getModelColour()) {
+                            return Optional.of(object);
+                        }
+                    }
+                    for (GameObject object : objects) {
+                        if (object.getModelColors()[0] == rock.getModelColour()) {
+                            return Optional.of(object);
+                        }
+                    }
+                }
+
             }
         }
         return Optional.empty();
@@ -130,6 +170,11 @@ public class MiningHandler extends Node {
     }
 
     public boolean shouldExecute() {
+        return true;
+    }
+
+    @Override
+    public boolean stopsExecution() {
         return true;
     }
 }

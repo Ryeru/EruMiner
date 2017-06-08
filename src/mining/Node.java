@@ -16,6 +16,8 @@ public abstract class Node {
 
     public abstract boolean shouldExecute();
 
+    public abstract boolean stopsExecution();
+
     protected MethodContext api() {
         return context;
     }
@@ -26,5 +28,8 @@ public abstract class Node {
 
     protected void sleepUntil(Condition condition, int mean, int dev) {
         MethodProvider.sleepUntil(condition, (long) Calculations.nextGaussianRandom(mean, dev));
+    }
+
+    public void kill(){
     }
 }
