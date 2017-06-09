@@ -100,4 +100,9 @@ public class BankHandler extends Node {
         return api().getBank().isOpen() || api().getInventory().isFull() || !pickaxe.isPresent();
     }
 
+    @Override
+    public boolean stopsExecution() {
+        return true;
+    }
+
 }

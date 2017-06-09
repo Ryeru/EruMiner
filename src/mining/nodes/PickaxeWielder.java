@@ -25,4 +25,9 @@ public class PickaxeWielder extends Node {
         Optional<Pickaxe> pickaxe = Pickaxe.getBest();
         return pickaxe.isPresent() && pickaxe.get().canWear() && pickaxe.get().isInInventory();
     }
+
+    @Override
+    public boolean stopsExecution() {
+        return true;
+    }
 }

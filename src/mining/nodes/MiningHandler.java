@@ -1,6 +1,7 @@
 package mining.nodes;
 
 import mining.Node;
+import mining.data.Coord;
 import mining.data.Rock;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.MethodContext;
@@ -10,9 +11,8 @@ import org.dreambot.api.wrappers.interactive.GameObject;
 import org.dreambot.api.wrappers.interactive.Player;
 
 import java.awt.*;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
+import java.util.*;
+import java.util.List;
 
 public class MiningHandler extends Node {
 
@@ -38,7 +38,7 @@ public class MiningHandler extends Node {
     public void execute() {
         HashSet<GameObject> inUse = getAlreadyInUseRocks();
         Optional<GameObject> rock = nearest(inUse);
-
+        Iterator<Coord> coordIterator;
         if (rock.isPresent()) {
             if (rock.get().isOnScreen() && rock.get().distance() < 7) {
                 if (stoppedMining() && rock.get().interact("Mine")) {
@@ -63,6 +63,13 @@ public class MiningHandler extends Node {
                     return newRock.isPresent() && newRock.get().isOnScreen();
                 });
             }
+        } else if (Rock.getSelectedCoords().size() == 1
+                && (coordIterator = Rock.getSelectedCoords().iterator()).hasNext()
+                && coordIterator.next().toTile().distance() < 15) {
+            sleepUntil(() -> {
+                Optional<GameObject> newRock = nearest(inUse);
+                return newRock.isPresent() && newRock.get().isOnScreen();
+            });
         } else if (api().getWalking().walk(miningLocationTile)) {
             int randomDistance = (int) Calculations.nextGaussianRandom(5, 3);
             sleepUntil(() -> api().getWalking().getDestinationDistance() < randomDistance, 3200, 200);
@@ -78,36 +85,48 @@ public class MiningHandler extends Node {
     }
 
     private Optional<GameObject> nearest(HashSet<GameObject> inUse) {
+        boolean hasSelectedRocks = Rock.getSelectedCoords().size() > 0;
         HashSet<Short> colours = new HashSet<>();
-        java.util.List<GameObject> notInUseObjects = new LinkedList<>();
-        java.util.List<GameObject> objects = api().getGameObjects().all(gameObject -> {
+        List<GameObject> unusedObjects = new LinkedList<>();
+        List<GameObject> objects = new LinkedList<>();
+
+        for (GameObject gameObject : api().getGameObjects().all()) {
             String name;
             short[] modelColours;
-            if (gameObject != null && (name = gameObject.getName()) != null && name.contains("Rock")
-                    && (modelColours = gameObject.getModelColors()) != null && modelColours.length > 0 && gameObject.distance() < 12) {
+
+            if (gameObject != null && (name = gameObject.getName()) != null && name.equals("Rocks")
+                    && (modelColours = gameObject.getModelColors()) != null && modelColours.length > 0
+                    && gameObject.distance() < 12) {
+
+                Coord tile = new Coord(gameObject.getTile());
                 colours.add(modelColours[0]);
 
-                if (!inUse.contains(gameObject) && gameObject.distance() < 5) {
-                    notInUseObjects.add(gameObject);
-                    return false;
+                if (!hasSelectedRocks || Rock.getSelectedCoords().contains(tile)) {
+                    if (!inUse.contains(gameObject) && gameObject.distance() < 5) {
+                        unusedObjects.add(gameObject);
+                    } else {
+                        objects.add(gameObject);
+                    }
                 }
-                return true;
             }
-            return false;
-        });
+        }
 
-        notInUseObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
-        objects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        return bestObjectMatch(colours, unusedObjects, objects);
+    }
+
+    private Optional<GameObject> bestObjectMatch(HashSet<Short> colours, List<GameObject> notInUse, List<GameObject> inUse) {
+        notInUse.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        inUse.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
 
         for (Rock rock : Rock.values()) {
             if (rock.canMine(api().getSkills().getRealLevel(Skill.MINING))
                     && colours.contains(rock.getModelColour())) {
-                for (GameObject object : notInUseObjects) {
+                for (GameObject object : notInUse) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
                 }
-                for (GameObject object : objects) {
+                for (GameObject object : inUse) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
@@ -123,13 +142,19 @@ public class MiningHandler extends Node {
 
     private HashSet<GameObject> getAlreadyInUseRocks() {
         HashSet<GameObject> inUse = new HashSet<>();
-        for (Player player : api().getPlayers().all(player -> player.distance() <= 7)) {
+        for (Player player : api().getPlayers().all(player -> player.distance() <= 7
+                && player.getAnimation() >= MINING_ANIMATION)) {
             inUse.add(getAlreadyInUseRock(player));
         }
         return inUse;
     }
 
     public boolean shouldExecute() {
+        return true;
+    }
+
+    @Override
+    public boolean stopsExecution() {
         return true;
     }
 }
