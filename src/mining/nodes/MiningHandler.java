@@ -85,73 +85,52 @@ public class MiningHandler extends Node {
     }
 
     private Optional<GameObject> nearest(HashSet<GameObject> inUse) {
+        boolean hasSelectedRocks = Rock.getSelectedCoords().size() > 0;
         HashSet<Short> colours = new HashSet<>();
+        List<GameObject> unusedObjects = new LinkedList<>();
+        List<GameObject> objects = new LinkedList<>();
 
-        List<GameObject> notInUseObjects = new LinkedList<>();
-        List<GameObject> notInUseSelectedObjects = new LinkedList<>();
-        List<GameObject> selectedObjects = new LinkedList<>();
-
-        List<GameObject> objects = api().getGameObjects().all(gameObject -> {
+        for (GameObject gameObject : api().getGameObjects().all()) {
             String name;
             short[] modelColours;
-            if (gameObject != null && (name = gameObject.getName()) != null && name.contains("Rock")
-                    && (modelColours = gameObject.getModelColors()) != null && modelColours.length > 0 && gameObject.distance() < 12) {
+
+            if (gameObject != null && (name = gameObject.getName()) != null && name.equals("Rocks")
+                    && (modelColours = gameObject.getModelColors()) != null && modelColours.length > 0
+                    && gameObject.distance() < 12) {
+
                 Coord tile = new Coord(gameObject.getTile());
                 colours.add(modelColours[0]);
 
-                if (!inUse.contains(gameObject) && gameObject.distance() < 5) {
-                    if (Rock.getSelectedCoords().contains(tile)) {
-                        notInUseSelectedObjects.add(gameObject);
-                        return false;
+                if (!hasSelectedRocks || Rock.getSelectedCoords().contains(tile)) {
+                    if (!inUse.contains(gameObject) && gameObject.distance() < 5) {
+                        unusedObjects.add(gameObject);
+                    } else {
+                        objects.add(gameObject);
                     }
-                    notInUseObjects.add(gameObject);
-                    return false;
                 }
-                if (Rock.getSelectedCoords().contains(tile)) {
-                    selectedObjects.add(gameObject);
-                    return false;
-                }
-                return true;
             }
-            return false;
-        });
-
-        int selectedSize = Rock.getSelectedCoords().size();
-
-        if (selectedSize > 0) {
-            notInUseSelectedObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
-            selectedObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
-        } else {
-            notInUseObjects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
-            objects.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
         }
+
+        return bestObjectMatch(colours, unusedObjects, objects);
+    }
+
+    private Optional<GameObject> bestObjectMatch(HashSet<Short> colours, List<GameObject> notInUse, List<GameObject> inUse) {
+        notInUse.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
+        inUse.sort((o1, o2) -> (int) (o1.distance() - o2.distance()));
 
         for (Rock rock : Rock.values()) {
             if (rock.canMine(api().getSkills().getRealLevel(Skill.MINING))
                     && colours.contains(rock.getModelColour())) {
-                for (GameObject object : notInUseSelectedObjects) {
+                for (GameObject object : notInUse) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
                 }
-                for (GameObject object : selectedObjects) {
+                for (GameObject object : inUse) {
                     if (object.getModelColors()[0] == rock.getModelColour()) {
                         return Optional.of(object);
                     }
                 }
-                if (selectedSize == 0) {
-                    for (GameObject object : notInUseObjects) {
-                        if (object.getModelColors()[0] == rock.getModelColour()) {
-                            return Optional.of(object);
-                        }
-                    }
-                    for (GameObject object : objects) {
-                        if (object.getModelColors()[0] == rock.getModelColour()) {
-                            return Optional.of(object);
-                        }
-                    }
-                }
-
             }
         }
         return Optional.empty();
@@ -163,7 +142,8 @@ public class MiningHandler extends Node {
 
     private HashSet<GameObject> getAlreadyInUseRocks() {
         HashSet<GameObject> inUse = new HashSet<>();
-        for (Player player : api().getPlayers().all(player -> player.distance() <= 7)) {
+        for (Player player : api().getPlayers().all(player -> player.distance() <= 7
+                && player.getAnimation() >= MINING_ANIMATION)) {
             inUse.add(getAlreadyInUseRock(player));
         }
         return inUse;

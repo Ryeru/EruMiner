@@ -32,6 +32,10 @@ public enum Rock {
         return selectedTiles.add(tile);
     }
 
+    public static boolean isSelected(Coord tile) {
+        return selectedTiles.contains(tile);
+    }
+
     public boolean canMine(int level) {
         return level >= this.requiredLevel;
     }
@@ -41,10 +45,9 @@ public enum Rock {
     }
 
     public static void drawSelectedTiles(Graphics graphics) {
-        Color selectedTiles = new Color(0, 255, 3, 84);
-
+        Color selectedTiles = new Color(0, 255, 3, 44);
         graphics.setColor(selectedTiles);
-        
+
         for (Coord coord : getSelectedCoords()) {
             Tile newTile = coord.toTile();
             Polygon polygon;

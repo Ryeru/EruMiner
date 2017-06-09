@@ -39,7 +39,7 @@ public class RockSelector extends Node {
                         String name;
                         if (entity != null && (name = entity.getName()) != null && name.equals("Rocks")) {
                             Coord tile = new Coord(entity.getTile());
-                            if (!Rock.getSelectedCoords().contains(tile)) {
+                            if (!Rock.isSelected(tile)) {
                                 Rock.addSelectedTile(tile);
                             }
                         }

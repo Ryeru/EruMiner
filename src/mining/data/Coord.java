@@ -5,6 +5,8 @@ import org.dreambot.api.methods.map.Tile;
 /**
  * Created by Leafs on 8-6-2017.
  */
+
+//TODO - Use Tile instead of my custom class Coord for drawing graphics.
 public class Coord {
     private int x;
     private int y;
